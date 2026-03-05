@@ -1,0 +1,38 @@
+# Dockerfile for running Claude Code inference on ScienceAgentBench tasks.
+# Extends the SAB eval base image so Claude writes code against the EXACT same
+# Python environment that the eval harness re-runs it in.
+#
+# Prerequisites:
+#   docker build -f Dockerfile.sab_base -t sab.base.x86_64:latest .
+#
+# Build:
+#   docker build -f Dockerfile.claude_code -t sab-claude-code:latest .
+#
+# The inference script (run_infer_claude_code.py) starts containers from this
+# image and injects per-task datasets + instructions at runtime.
+
+FROM sab.base.x86_64:latest
+
+# ── Node.js (required by Claude Code) ───────────────────────────────────────
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Claude Code CLI ─────────────────────────────────────────────────────────
+RUN npm install -g @anthropic-ai/claude-code
+
+# ── Working directory ────────────────────────────────────────────────────────
+WORKDIR /testbed
+
+# Pre-create the directory tree that tasks expect
+RUN mkdir -p /testbed/benchmark/datasets \
+             /testbed/benchmark/eval_programs/gold_results \
+             /testbed/pred_results \
+             /testbed/logs
+
+# Make benchmark/ a Python package for imports
+RUN touch /testbed/benchmark/__init__.py \
+          /testbed/benchmark/eval_programs/__init__.py
+
+# Default shell for docker exec
+CMD ["/bin/bash"]
