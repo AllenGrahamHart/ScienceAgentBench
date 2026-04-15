@@ -376,6 +376,7 @@ def main(
     run_id: str = "cc_run1_modal",
     openai_api_key: str = "",
     instance_ids: str = "",
+    max_concurrent: int = 0,
     benchmark_path: str = "benchmark",
     dataset_name: str = "osunlp/ScienceAgentBench",
     split: str = "validation",
@@ -388,6 +389,8 @@ def main(
         run_id: Run identifier.
         openai_api_key: OpenAI API key for visual judge tasks.
         instance_ids: Comma-separated instance IDs to evaluate (empty = all).
+        max_concurrent: Maximum number of Modal eval tasks to run at once.
+            0 means launch all selected instances together.
         benchmark_path: Local path to benchmark/ directory.
         dataset_name: HuggingFace dataset name.
         split: Dataset split.
@@ -490,8 +493,21 @@ def main(
     ids_to_run = [d["instance_id"] for d in instances_to_run]
     print(f"Instance IDs: {ids_to_run}")
 
-    # Launch all instances in parallel via Modal map
-    results = list(evaluate_instance.map(instances_to_run, return_exceptions=True))
+    # Launch all instances in parallel via Modal map, or in bounded batches
+    # when max_concurrent is set to reduce external API pressure.
+    results = []
+    if max_concurrent and max_concurrent > 0:
+        for start in range(0, len(instances_to_run), max_concurrent):
+            batch = instances_to_run[start : start + max_concurrent]
+            batch_ids = [d["instance_id"] for d in batch]
+            print(
+                f"Starting eval batch {start // max_concurrent + 1}: "
+                f"{len(batch)} instances {batch_ids}"
+            )
+            batch_results = list(evaluate_instance.map(batch, return_exceptions=True))
+            results.extend(batch_results)
+    else:
+        results = list(evaluate_instance.map(instances_to_run, return_exceptions=True))
 
     # Process results
     num_success = 0

@@ -98,8 +98,9 @@ def build_instruction(
     parts.append(
         f"## Output Requirements\n\n"
         f"- Save your program as `/testbed/{gold_program_name}`\n"
-        f"- The program must write its output to `/testbed/pred_results/{output_fname}`\n"
-        f"- The program must be self-contained and runnable with `python /testbed/{gold_program_name}`\n"
+        f"- The program must produce the output file at `{output_fname}` (relative to `/testbed/`)\n"
+        f"- Do not prepend another `pred_results/` directory; use the output path above exactly\n"
+        f"- The program must be self-contained and runnable with `cd /testbed && python {gold_program_name}`\n"
         f"- Use the conda environment `sab` (already activated) which has common scientific packages pre-installed\n"
     )
 
